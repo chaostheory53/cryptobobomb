@@ -3,7 +3,7 @@ import requests
 import os
 from google import genai
 from dotenv import load_dotenv
-import redis
+from supabase import create_client, Client
 
 load_dotenv()
 
@@ -13,29 +13,17 @@ app = Flask(__name__)
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 NEWS_API_KEY = os.environ.get("NEWS_API_KEY")
 
-# Initialize Redis
+# Initialize Supabase
+supabase: Client = None
 try:
-    kv_url = os.environ.get("KV_URL_REST_API_URL") or os.environ.get("KV_URL")
-    kv_token = os.environ.get("KV_REST_API_TOKEN") or os.environ.get("KV_TOKEN")
-    
-    # Simple Redis direct connection or fallback to REST if needed?
-    # For Vercel KV (Upstash), standard redis-py works fine if REDIS_URL is provided
-    # but Vercel creates environ vars: KV_URL, KV_REST_API_URL, etc.
-    # Let's try standard redis first if connection string is available
-    redis_url = os.environ.get("KV_URL") or os.environ.get("REDIS_URL")
-    if redis_url:
-        # If it's a `redis://` url, use it. Upstash uses `rediss://` (secure)
-        if redis_url.startswith("redis"):
-            redis_client = redis.from_url(redis_url, decode_responses=True)
-        else:
-            print(f"Warning: KV_URL doesn't look like a redis url: {redis_url[:10]}...")
-            redis_client = None
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_ANON_KEY")
+    if url and key:
+        supabase = create_client(url, key)
     else:
-        print("Warning: KV_URL or REDIS_URL not set.")
-        redis_client = None
+        print("Warning: SUPABASE_URL or SUPABASE_KEY is missing.")
 except Exception as e:
-    print(f"Warning: Redis Client failed to initialize: {e}")
-    redis_client = None
+    print(f"Warning: Supabase Client failed to initialize: {e}")
 
 # Initialize the Gemini Client. 
 # It automatically picks up the GEMINI_API_KEY environment variable.
@@ -115,12 +103,24 @@ def webhook():
         # Watchlist Features
         elif text.startswith('/track'):
             parts = text.split(' ')
-            if len(parts) > 1 and redis_client:
+            if len(parts) > 1 and supabase:
                 coin = parts[1].lower()
-                key = f"watchlist:{chat_id}"
-                redis_client.sadd(key, coin)
-                reply_text = f"Added {coin} to your watchlist."
-            elif not redis_client:
+                try:
+                    # Insert into Supabase table 'watchlist'
+                    # Assuming table structure: id (auto), chat_id, coin, (unique constraint on chat_id, coin)
+                    data, count = supabase.table('watchlist').insert({
+                        "chat_id": chat_id,
+                        "coin": coin
+                    }).execute()
+                    reply_text = f"Added {coin} to your watchlist."
+                except Exception as e:
+                    # Check for unique constraint violation (duplicate entry)
+                    if "duplicate key" in str(e) or "23505" in str(e): # PG error code for unique violation
+                        reply_text = f"{coin} is already in your watchlist."
+                    else:
+                        reply_text = f"Error adding coin: {str(e)}"
+                        print(f"Supabase error: {e}")
+            elif not supabase:
                 reply_text = "Database not configured."
             else:
                 reply_text = "Usage: /track [coin]"
@@ -130,15 +130,24 @@ def webhook():
 
         elif text.startswith('/untrack'):
             parts = text.split(' ')
-            if len(parts) > 1 and redis_client:
+            if len(parts) > 1 and supabase:
                 coin = parts[1].lower()
-                key = f"watchlist:{chat_id}"
-                result = redis_client.srem(key, coin)
-                if result:
-                    reply_text = f"Removed {coin} from your watchlist."
-                else:
-                    reply_text = f"{coin} was not in your watchlist."
-            elif not redis_client:
+                try:
+                     # Delete from Supabase
+                    data, count = supabase.table('watchlist').delete().match({
+                        "chat_id": chat_id, 
+                        "coin": coin
+                    }).execute()
+                    
+                    # data[1] usually contains the deleted rows list in python client v2
+                    # But checking if list is empty is enough
+                    if data and len(data[1]) > 0:
+                         reply_text = f"Removed {coin} from your watchlist."
+                    else:
+                         reply_text = f"{coin} was not in your watchlist."
+                except Exception as e:
+                    reply_text = f"Error removing coin: {str(e)}"
+            elif not supabase:
                 reply_text = "Database not configured."
             else:
                 reply_text = "Usage: /untrack [coin]"
@@ -147,14 +156,18 @@ def webhook():
                 requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", json={'chat_id': chat_id, 'text': reply_text})
 
         elif text.startswith('/watchlist'):
-            if redis_client:
-                key = f"watchlist:{chat_id}"
-                coins = redis_client.smembers(key)
-                if coins:
-                    coin_list = ", ".join(sorted(list(coins)))
-                    reply_text = f"Your Watchlist: {coin_list}"
-                else:
-                    reply_text = "Your watchlist is empty. Use /track [coin] to add one."
+            if supabase:
+                try:
+                    response = supabase.table('watchlist').select('coin').eq('chat_id', chat_id).execute()
+                    coins = [row['coin'] for row in response.data]
+                    
+                    if coins:
+                        coin_list = ", ".join(sorted(coins))
+                        reply_text = f"Your Watchlist: {coin_list}"
+                    else:
+                        reply_text = "Your watchlist is empty. Use /track [coin] to add one."
+                except Exception as e:
+                    reply_text = f"Error fetching watchlist: {str(e)}"
             else:
                 reply_text = "Database not configured."
 
@@ -189,30 +202,30 @@ def cron_job():
     # Verify the request is from Vercel Cron (optional security check for header)
     # if request.headers.get('Authorization') != ...: pass
 
-    if not redis_client or not TELEGRAM_TOKEN:
+    if not supabase or not TELEGRAM_TOKEN:
         return jsonify({'error': 'Config missing'}), 500
-
-    # 1. Get all watchlist keys: "watchlist:*"
-    # Note: In production with millions of keys, use SCAN. For a bot, KEYS is okay-ish but SCAN is safer.
-    watchlist_keys = []
-    cursor = '0'
-    while cursor != 0:
-        cursor, keys = redis_client.scan(cursor=cursor, match='watchlist:*', count=100)
-        watchlist_keys.extend(keys)
 
     processed_users = 0
     
-    for key in watchlist_keys:
-        # key format: watchlist:{chat_id}
-        parts = key.split(':')
-        if len(parts) == 2:
-            chat_id = parts[1]
-            coins = redis_client.smembers(key)
+    try:
+        # Fetch ALL watchlist items
+        # In production with large data, paginate this or process in batches
+        response = supabase.table('watchlist').select('*').execute()
+        all_rows = response.data
+        
+        # Group by chat_id: { chat_id: [coin1, coin2] }
+        user_coins = {}
+        for row in all_rows:
+            cid = row['chat_id']
+            coin = row['coin']
+            if cid not in user_coins:
+                user_coins[cid] = []
+            user_coins[cid].append(coin)
             
+        for cid, coins in user_coins.items():
             if not coins:
                 continue
 
-            # For each user, analyze their coins
             messages = []
             for coin in coins:
                 # We reuse the analyze_sentiment function
@@ -225,10 +238,14 @@ def cron_job():
                 # Send to user
                 url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
                 try:
-                    requests.post(url, json={'chat_id': chat_id, 'text': full_message, 'parse_mode': 'Markdown'})
+                    requests.post(url, json={'chat_id': cid, 'text': full_message, 'parse_mode': 'Markdown'})
                     processed_users += 1
                 except Exception as e:
-                    print(f"Failed to send to {chat_id}: {e}")
+                    print(f"Failed to send to {cid}: {e}")
+
+    except Exception as e:
+        print(f"Cron job error: {e}")
+        return jsonify({'error': str(e)}), 500
 
     return jsonify({'status': 'ok', 'users_notified': processed_users}), 200
 

@@ -2,4 +2,5 @@ flask
 requests
 google-genai
 python-dotenv
-redis
+python-dotenv
+supabase
