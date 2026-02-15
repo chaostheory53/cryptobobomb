@@ -48,7 +48,7 @@ def analyze_sentiment(coin):
         # We use Gemini 2.0 Flash (or closest available)
         # Using a model name that is generally available or falling back
         response = client.models.generate_content(
-            model='gemini-2.0-flash', 
+            model='gemini-2.5-flash', 
             contents=prompt
         )
         
