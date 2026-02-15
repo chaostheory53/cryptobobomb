@@ -193,61 +193,61 @@ def webhook():
 
     return jsonify({'status': 'ok'}), 200
 
-@app.route('/api/cron', methods=['GET'])
-def cron_job():
-    """
-    Cron job triggered every 30 minutes.
-    Iterates through all users' watchlists and sends updates.
-    """
-    # Verify the request is from Vercel Cron (optional security check for header)
-    # if request.headers.get('Authorization') != ...: pass
-
-    if not supabase or not TELEGRAM_TOKEN:
-        return jsonify({'error': 'Config missing'}), 500
-
-    processed_users = 0
-    
-    try:
-        # Fetch ALL watchlist items
-        # In production with large data, paginate this or process in batches
-        response = supabase.table('watchlist').select('*').execute()
-        all_rows = response.data
-        
-        # Group by chat_id: { chat_id: [coin1, coin2] }
-        user_coins = {}
-        for row in all_rows:
-            cid = row['chat_id']
-            coin = row['coin']
-            if cid not in user_coins:
-                user_coins[cid] = []
-            user_coins[cid].append(coin)
-            
-        for cid, coins in user_coins.items():
-            if not coins:
-                continue
-
-            messages = []
-            for coin in coins:
-                # We reuse the analyze_sentiment function
-                sentiment = analyze_sentiment(coin)
-                messages.append(f"**{coin.upper()}**: {sentiment}")
-
-            if messages:
-                full_message = "⏰ **30-Minute Update**\n\n" + "\n\n".join(messages)
-                
-                # Send to user
-                url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-                try:
-                    requests.post(url, json={'chat_id': cid, 'text': full_message, 'parse_mode': 'Markdown'})
-                    processed_users += 1
-                except Exception as e:
-                    print(f"Failed to send to {cid}: {e}")
-
-    except Exception as e:
-        print(f"Cron job error: {e}")
-        return jsonify({'error': str(e)}), 500
-
-    return jsonify({'status': 'ok', 'users_notified': processed_users}), 200
+# @app.route('/api/cron', methods=['GET'])
+# def cron_job():
+#     """
+#     Cron job triggered every 30 minutes.
+#     Iterates through all users' watchlists and sends updates.
+#     """
+#     # Verify the request is from Vercel Cron (optional security check for header)
+#     # if request.headers.get('Authorization') != ...: pass
+#
+#     if not supabase or not TELEGRAM_TOKEN:
+#         return jsonify({'error': 'Config missing'}), 500
+#
+#     processed_users = 0
+#     
+#     try:
+#         # Fetch ALL watchlist items
+#         # In production with large data, paginate this or process in batches
+#         response = supabase.table('watchlist').select('*').execute()
+#         all_rows = response.data
+#         
+#         # Group by chat_id: { chat_id: [coin1, coin2] }
+#         user_coins = {}
+#         for row in all_rows:
+#             cid = row['chat_id']
+#             coin = row['coin']
+#             if cid not in user_coins:
+#                 user_coins[cid] = []
+#             user_coins[cid].append(coin)
+#             
+#         for cid, coins in user_coins.items():
+#             if not coins:
+#                 continue
+#
+#             messages = []
+#             for coin in coins:
+#                 # We reuse the analyze_sentiment function
+#                 sentiment = analyze_sentiment(coin)
+#                 messages.append(f"**{coin.upper()}**: {sentiment}")
+#
+#             if messages:
+#                 full_message = "⏰ **30-Minute Update**\n\n" + "\n\n".join(messages)
+#                 
+#                 # Send to user
+#                 url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+#                 try:
+#                     requests.post(url, json={'chat_id': cid, 'text': full_message, 'parse_mode': 'Markdown'})
+#                     processed_users += 1
+#                 except Exception as e:
+#                     print(f"Failed to send to {cid}: {e}")
+#
+#     except Exception as e:
+#         print(f"Cron job error: {e}")
+#         return jsonify({'error': str(e)}), 500
+#
+#     return jsonify({'status': 'ok', 'users_notified': processed_users}), 200
 
 # Vercel requires a handler for serverless functions, often `app` is enough if using Flask with Vercel adapter or WSGI
 # But for `vercel.json` rewrites to work with standard Flask in some setups, we might need:
