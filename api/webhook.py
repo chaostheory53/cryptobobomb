@@ -61,7 +61,7 @@ def analyze_sentiment(coin):
         # We use Gemini 2.0 Flash (or closest available)
         # Using a model name that is generally available or falling back
         response = client.models.generate_content(
-            model='gemini-2.5-flash', 
+            model='gemini-2.5-pro', 
             contents=prompt
         )
         
@@ -181,7 +181,7 @@ def webhook():
                 chat_prompt = f"You are a helpful and witty crypto assistant named CryptoBobomb. The user said: '{text}'. Reply directly to them, keeping it concise and fun, but still technical."
                 
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash', 
+                    model='gemini-2.5-pro', 
                     contents=chat_prompt
                 )
                 reply_text = response.text.strip()
