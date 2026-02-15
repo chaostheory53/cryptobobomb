@@ -1,0 +1,76 @@
+Checking NewsAPI for 'bitcoin'...
+Request URL: https://newsapi.org/v2/everything?q=bitcoin&searchIn=title&language=en&sortBy=publishedAt&pageSize=5&apiKey=HIDDEN_KEY
+Status Code: 200
+
+Response Body:
+{
+  "status": "ok",
+  "totalResults": 2821,
+  "articles": [
+    {
+      "source": {
+        "id": null,
+        "name": "Bitcoinist"
+      },
+      "author": "Opeyemi Sule",
+      "title": "Bitcoin Whales Are Exiting The Profit Territory \u2014 And It Could Get Worse",
+      "description": "The price of Bitcoin has been under intense pressure so far in 2026, with the bear market wiping out the profits of several classes of investors. According to the latest on-chain data, this trend could have a broader ripple effect on the premier cryptocurrenc\u2026",
+      "url": "https://bitcoinist.com/bitcoin-whales-are-exiting-the-profit-territory/",
+      "urlToImage": "https://bitcoinist.com/wp-content/uploads/2026/02/iStock-1263427216-1.jpg",
+      "publishedAt": "2026-02-14T17:00:49Z",
+      "content": "The price of Bitcoin has been under intense pressure so far in 2026, with the bear market wiping out the profits of several classes of investors. According to the latest on-chain data, this trend cou\u2026 [+2487 chars]"
+    },
+    {
+      "source": {
+        "id": null,
+        "name": "newsBTC"
+      },
+      "author": "Godspower Owie",
+      "title": "Bitcoin Eyes Untapped Liquidity: $64,000 Support Could Be Next Target",
+      "description": "Bitcoin is hovering near key liquidity zones after a week of downward momentum, and traders are now eyeing untapped areas around $64,000. With price action showing potential short-term swings and H1 support under close watch, the next move could hinge on whet\u2026",
+      "url": "http://www.newsbtc.com/news/bitcoin/bitcoin-eyes-untapped-liquidity/",
+      "urlToImage": "https://www.newsbtc.com/wp-content/uploads/2026/02/Bitcoin-from-Getty-Images-28.jpg?fit=612%2C396",
+      "publishedAt": "2026-02-14T17:00:43Z",
+      "content": "Bitcoin is hovering near key liquidity zones after a week of downward momentum, and traders are now eyeing untapped areas around $64,000. With price action showing potential short-term swings and H1 \u2026 [+2681 chars]"
+    },
+    {
+      "source": {
+        "id": null,
+        "name": "Decrypt"
+      },
+      "author": "Logan Hitchcock",
+      "title": "Bitcoin Is Down Bad, But Hasn't Yet Hit Its 'Ultimate Bear Market Bottom': Analysts",
+      "description": "Despite its 45% fall since its October peak, Bitcoin has not yet found its bear market bottom, according to a new report from CryptoQuant.",
+      "url": "https://decrypt.co/358083/bitcoin-down-bad-hasnt-hit-ultimate-bear-market-bottom",
+      "urlToImage": "https://cdn.decrypt.co/resize/1024/height/512/wp-content/uploads/2026/02/bitcoin-crack-decrypt-style-gID_7.jpg",
+      "publishedAt": "2026-02-14T16:11:05Z",
+      "content": "In brief\r\n<ul><li>Bitcoin's \"ultimate bear market bottom\" is $55,000, according to a new report from CryptoQuant.</li><li>The firm's market indicator also sits above its \"extreme bear\" phase, which h\u2026 [+2172 chars]"
+    },
+    {
+      "source": {
+        "id": null,
+        "name": "Ambcrypto.com"
+      },
+      "author": "Ritika Gupta",
+      "title": "Truth Social files for Bitcoin ETF \u2013 Risky gamble or a game-changer?",
+      "description": "Can President Trump\u2019s ETF move shake up Bitcoin amid ongoing market pressure?",
+      "url": "https://ambcrypto.com/truth-social-files-for-bitcoin-etf-risky-gamble-or-a-game-changer/",
+      "urlToImage": "https://ambcrypto.com/wp-content/uploads/2026/02/Ritika1-7-1000x600.webp",
+      "publishedAt": "2026-02-14T15:00:57Z",
+      "content": "The biggest takeaway from the 2025 cycle? Risk assets are officially no longer following the usual post-halving playbook. With a 7.85% yearly close, the TOTAL crypto market cap didnt ride the 2024 ha\u2026 [+2736 chars]"
+    },
+    {
+      "source": {
+        "id": null,
+        "name": "CryptoSlate"
+      },
+      "author": "Liam 'Akiba' Wright",
+      "title": "Bitcoin refuses to lose $70,000 this weekend. Was my $49k bottom call wrong?",
+      "description": "Bitcoin is holding its ground this weekend. After Friday\u2019s soft CPI rally, price keeps leaning into the same overhead zone around $70,300, and bids keep showing up above $65,000. That detail matters more than the stall. Last Sunday I framed $71,500 as the mar\u2026",
+      "url": "https://cryptoslate.com/bitcoin-refuses-to-lose-70000-this-weekend-was-my-49k-bottom-call-wrong/",
+      "urlToImage": "https://cryptoslate.com/wp-content/uploads/2026/01/bitcoin-balloon.jpg",
+      "publishedAt": "2026-02-14T14:35:46Z",
+      "content": "Bitcoin is holding its ground this weekend. After Fridays soft CPI rally, price keeps leaning into the same overhead zone around $70,300, and bids keep showing up above $65,000.\r\nThat detail matters \u2026 [+10359 chars]"
+    }
+  ]
+}
