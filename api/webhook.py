@@ -61,7 +61,7 @@ def analyze_sentiment(coin):
         # We use Gemini 2.0 Flash (or closest available)
         # Using a model name that is generally available or falling back
         response = client.models.generate_content(
-            model='gemini-2.5-pro', 
+            model='gemini-2.0-flash', 
             contents=prompt
         )
         
@@ -247,7 +247,7 @@ def webhook():
                 chat_prompt = f"You are a helpful and witty crypto assistant named CryptoBobomb. The user said: '{text}'. Reply directly to them, keeping it concise and fun, but still technical."
                 
                 response = client.models.generate_content(
-                    model='gemini-2.5-pro', 
+                    model='gemini-2.0-flash', 
                     contents=chat_prompt
                 )
                 reply_text = response.text.strip()
@@ -256,6 +256,9 @@ def webhook():
                 requests.post(url, json={'chat_id': chat_id, 'text': reply_text})
             except Exception as e:
                 print(f"Error in chat: {e}")
+                error_text = f"⚠️ Sorry, I ran into an error: {str(e)}"
+                if TELEGRAM_TOKEN:
+                    requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", json={'chat_id': chat_id, 'text': error_text})
 
     return jsonify({'status': 'ok'}), 200
 
