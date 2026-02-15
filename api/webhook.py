@@ -70,6 +70,26 @@ def analyze_sentiment(coin):
     except Exception as e:
         return f"Error analyzing sentiment: {str(e)}"
 
+def get_crypto_prices(coins):
+    """
+    Fetches current price and 24h change for a list of coins.
+    Uses CoinGecko API (Free Tier).
+    """
+    if not coins:
+        return {}
+    
+    # join coins with comma
+    ids = ",".join(coins)
+    url = f"https://api.coingecko.com/api/v3/simple/price?ids={ids}&vs_currencies=usd&include_24hr_change=true"
+    
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        return {}
+    except Exception:
+        return {}
+
 @app.route('/api/webhook', methods=['POST'])
 def webhook():
     update = request.get_json()
@@ -81,8 +101,23 @@ def webhook():
         chat_id = update['message']['chat']['id']
         text = update['message']['text'].lower()
         
+        # Command Handlers
+        if text.startswith('/start') or text.startswith('/help'):
+            reply_text = (
+                "💣 **Welcome to CryptoBobomb!**\n\n"
+                "I can analyze crypto sentiment and track prices for you.\n\n"
+                "**Commands:**\n"
+                "• `/sentiment [coin]` - AI analysis of news\n"
+                "• `/track [coin]` - Add to watchlist\n"
+                "• `/untrack [coin]` - Remove from watchlist\n"
+                "• `/watchlist` - View your list\n\n"
+                "Or just chat with me! I use Gemini 2.5 Pro. 🧠"
+            )
+            if TELEGRAM_TOKEN:
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", json={'chat_id': chat_id, 'text': reply_text, 'parse_mode': 'Markdown'})
+
         # New AI Sentiment Skill
-        if text.startswith('/sentiment'):
+        elif text.startswith('/sentiment'):
             # Extract the coin name (e.g., "/sentiment solana")
             parts = text.split(' ')
             if len(parts) > 1:
@@ -162,8 +197,39 @@ def webhook():
                     coins = [row['coin'] for row in response.data]
                     
                     if coins:
-                        coin_list = ", ".join(sorted(coins))
-                        reply_text = f"Your Watchlist: {coin_list}"
+                        # 1. Fetch Prices in Batch
+                        prices = get_crypto_prices(coins)
+                        
+                        message_lines = ["📊 **Your Watchlist:**\n"]
+                        
+                        for coin in sorted(coins):
+                            # 2. Get Sentiment (this is still slow per coin, maybe cache later?)
+                            # For now, we do it live as requested.
+                            sentiment = analyze_sentiment(coin)
+                            
+                            # Determine Emoji
+                            if "BULLISH" in sentiment.upper():
+                                emoji = "🟢"
+                            elif "BEARISH" in sentiment.upper():
+                                emoji = "🔴"
+                            else:
+                                emoji = "⚪" # Neutral
+                            
+                            # Format Price Data
+                            coin_data = prices.get(coin, {})
+                            price = coin_data.get('usd', 'N/A')
+                            change_24h = coin_data.get('usd_24h_change', 0)
+                            
+                            # Format change with arrow
+                            change_str = ""
+                            if isinstance(change_24h, (int, float)):
+                                arrow = "⬆️" if change_24h >= 0 else "⬇️"
+                                change_str = f" ({arrow} {change_24h:.2f}%)"
+                            
+                            line = f"{emoji} **{coin.title()}**: ${price}{change_str}\n_{sentiment}_"
+                            message_lines.append(line)
+                        
+                        reply_text = "\n\n".join(message_lines)
                     else:
                         reply_text = "Your watchlist is empty. Use /track [coin] to add one."
                 except Exception as e:
@@ -172,7 +238,7 @@ def webhook():
                 reply_text = "Database not configured."
 
             if TELEGRAM_TOKEN:
-                requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", json={'chat_id': chat_id, 'text': reply_text})
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", json={'chat_id': chat_id, 'text': reply_text, 'parse_mode': 'Markdown'})
 
         # Natural Language Conversation Fallback
         elif not text.startswith('/'):
